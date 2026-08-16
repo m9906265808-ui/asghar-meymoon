@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>METANO RUN</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;overflow:hidden;font-family:'Courier New',monospace;user-select:none}
+
+/* ── BACKGROUND ── */
+.bg{position:fixed;inset:0;background:linear-gradient(180deg,#0a0a0a 0%,#111118 60%,#0d0d1a 100%);z-index:0}
+.stars{position:fixed;inset:0;z-index:0}
+.star{position:absolute;border-radius:50%;background:#fff;animation:twinkle linear infinite}
+@keyframes twinkle{0%,100%{opacity:.2}50%{opacity:.8}}
+
+/* ── GAME WRAP ── */
+.game-wrap{position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;gap:0}
+
+/* ── HEADER ── */
+.header{width:800px;display:flex;align-items:center;justify-content:space-between;padding:10px 0 8px;border-bottom:1px solid rgba(255,255,255,.08)}
+.logo-header{display:flex;align-items:center;gap:10px}
+.logo-mini svg{filter:drop-shadow(0 0 6px rgba(255,255,255,.4))}
+.game-title-h{font-size:15px;font-weight:700;letter-spacing:6px;color:#fff;text-transform:uppercase}
+.scores{display:flex;gap:24px;align-items:center}
+.score-block{text-align:right}
+.score-label{font-size:9px;letter-spacing:3px;color:rgba(255,255,255,.35);text-transform:uppercase}
+.score-val{font-size:20px;font-weight:700;color:#fff;letter-spacing:-1px;font-family:'Courier New',monospace}
+.hi-val{color:rgba(255,255,255,.5)}
+
+/* ── CANVAS ── */
+#gameCanvas{display:block;border-top:none;border-bottom:none;background:transparent}
+
+/* ── GROUND BAR ── */
+.ground-bar{width:800px;height:2px;background:rgba(255,255,255,.12)}
+
+/* ── TAGLINE ── */
+.tagline-bar{width:800px;padding:8px 0 0;display:flex;align-items:center;justify-content:center;gap:8px;min-height:28px}
+.tagline-text{font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.3);text-align:center;transition:all .5s ease}
+.tagline-text.flash{color:rgba(255,255,255,.8);letter-spacing:3px}
+
+/* ── CONTROLS HINT ── */
+.hint{font-size:10px;letter-spacing:3px;color:rgba(255,255,255,.2);margin-top:10px}
+
+/* ── SPLASH ── */
+#splash{position:fixed;inset:0;background:#0a0a0a;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px}
+.splash-logo{animation:splashIn 1.2s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes splashIn{from{transform:scale(.2) translateY(40px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.splash-title{font-size:52px;font-weight:900;letter-spacing:18px;color:#fff;text-transform:uppercase;animation:fadeUp .8s ease .6s both;text-shadow:0 0 40px rgba(255,255,255,.15)}
+.splash-sub{font-size:11px;letter-spacing:6px;color:rgba(255,255,255,.35);animation:fadeUp .8s ease .9s both}
+.splash-tagline{font-size:13px;letter-spacing:3px;color:rgba(255,255,255,.5);animation:fadeUp .8s ease 1.1s both;text-align:center;max-width:440px;line-height:1.8}
+.splash-tagline span{color:#fff;font-weight:700}
+.press-key{font-size:11px;letter-spacing:5px;color:rgba(255,255,255,.3);animation:blink 1.2s ease-in-out 1.8s infinite both;margin-top:8px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes blink{0%,100%{opacity:.3}50%{opacity:.9}}
+
+/* ── GAME OVER ── */
+#gameOver{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:80;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;backdrop-filter:blur(4px)}
+.go-logo{animation:goLogo .6s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes goLogo{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+.go-title{font-size:38px;font-weight:900;letter-spacing:10px;color:#fff;text-transform:uppercase}
+.go-score{font-size:64px;font-weight:700;color:#fff;font-family:'Courier New',monospace;letter-spacing:-2px}
+.go-label{font-size:11px;letter-spacing:4px;color:rgba(255,255,255,.4)}
+.go-msg{font-size:12px;letter-spacing:3px;color:rgba(255,255,255,.5);text-align:center;max-width:400px;line-height:2}
+.go-msg span{color:#fff}
+.restart-btn{padding:13px 48px;background:transparent;border:1.5px solid rgba(255,255,255,.5);color:#fff;font-size:12px;letter-spacing:6px;text-transform:uppercase;cursor:pointer;transition:all .3s;font-family:inherit;margin-top:8px}
+.restart-btn:hover{background:rgba(255,255,255,.1);border-color:#fff;letter-spacing:8px}
+.go-stats{display:flex;gap:32px;margin:4px 0}
+.go-stat{text-align:center}
+.go-stat-v{font-size:22px;font-weight:700;color:#fff;font-family:'Courier New',monospace}
+.go-stat-l{font-size:9px;letter-spacing:3px;color:rgba(255,255,255,.35);text-transform:uppercase}
+
+/* ── POWER UP TOAST ── */
+#puToast{position:fixed;top:24px;left:50%;transform:translateX(-50%) translateY(-60px);background:rgba(10,10,10,.9);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:10px 24px;font-size:11px;letter-spacing:3px;color:#fff;z-index:90;transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .4s;opacity:0;pointer-events:none}
+#puToast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="stars" id="stars"></div>
+
+<!-- POWER UP TOAST -->
+<div id="puToast" id="puToast"></div>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-logo">
+    <svg width="90" height="90" viewBox="0 0 100 100" fill="none">
+      <!-- M shape -->
+      <path d="M15 80 L15 30 L30 52 L50 18 L70 52 L85 30 L85 80 L73 80 L73 48 L65 62 L50 34 L35 62 L27 48 L27 80 Z" fill="white"/>
+      <!-- bottom diamond bracket -->
+      <path d="M35 80 L65 80 L65 68 L50 55 L35 68 Z" fill="white"/>
+      <!-- top arrow -->
+      <rect x="47" y="8" width="6" height="28" fill="white"/>
+      <path d="M43 10 L57 10 L50 2 Z" fill="white"/>
+      <!-- bottom small diamond -->
+      <path d="M46 74 L54 74 L50 82 Z" fill="white"/>
+    </svg>
+  </div>
+  <div class="splash-title">METANO</div>
+  <div class="splash-sub">GROWTH · DISCIPLINE · PROGRESS</div>
+  <div class="splash-tagline">
+    رشد واقعی یعنی <span>هر روز یه قدم جلوتر</span><br>
+    آماده‌ای شروع کنی؟
+  </div>
+  <div class="press-key">SPACE / TAP TO BEGIN</div>
+</div>
+
+<!-- GAME OVER -->
+<div id="gameOver">
+  <svg class="go-logo" width="60" height="60" viewBox="0 0 100 100" fill="none">
+    <path d="M15 80 L15 30 L30 52 L50 18 L70 52 L85 30 L85 80 L73 80 L73 48 L65 62 L50 34 L35 62 L27 48 L27 80 Z" fill="white"/>
+    <path d="M35 80 L65 80 L65 68 L50 55 L35 68 Z" fill="white"/>
+    <rect x="47" y="8" width="6" height="28" fill="white"/>
+    <path d="M43 10 L57 10 L50 2 Z" fill="white"/>
+    <path d="M46 74 L54 74 L50 82 Z" fill="white"/>
+  </svg>
+  <div class="go-title">GAME OVER</div>
+  <div class="go-label">SCORE</div>
+  <div class="go-score" id="goScore">0</div>
+  <div class="go-stats">
+    <div class="go-stat"><div class="go-stat-v" id="goLogos">0</div><div class="go-stat-l">Logos</div></div>
+    <div class="go-stat"><div class="go-stat-v" id="goHi">0</div><div class="go-stat-l">Best</div></div>
+    <div class="go-stat"><div class="go-stat-v" id="goLevel">1</div><div class="go-stat-l">Level</div></div>
+  </div>
+  <div class="go-msg" id="goMsg">هر بار که می‌افتی،<br><span>یاد می‌گیری</span> — متانو کنارته</div>
+  <button class="restart-btn" onclick="restartGame()">TRY AGAIN</button>
+</div>
+
+<!-- GAME UI -->
+<div class="game-wrap" id="gameWrap">
+  <div class="header">
+    <div class="logo-header">
+      <div class="logo-mini">
+        <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+          <path d="M15 80 L15 30 L30 52 L50 18 L70 52 L85 30 L85 80 L73 80 L73 48 L65 62 L50 34 L35 62 L27 48 L27 80 Z" fill="white"/>
+          <path d="M35 80 L65 80 L65 68 L50 55 L35 68 Z" fill="white"/>
+          <rect x="47" y="8" width="6" height="28" fill="white"/>
+          <path d="M43 10 L57 10 L50 2 Z" fill="white"/>
+        </svg>
+      </div>
+      <div class="game-title-h">METANO RUN</div>
+    </div>
+    <div class="scores">
+      <div class="score-block">
+        <div class="score-label">SCORE</div>
+        <div class="score-val" id="scoreDisp">0</div>
+      </div>
+      <div class="score-block">
+        <div class="score-label">BEST</div>
+        <div class="score-val hi-val" id="hiDisp">0</div>
+      </div>
+      <div class="score-block">
+        <div class="score-label">LEVEL</div>
+        <div class="score-val" id="lvlDisp">1</div>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="gameCanvas" width="800" height="280"></canvas>
+  <div class="ground-bar"></div>
+  <div class="tagline-bar">
+    <div class="tagline-text" id="tagline">متانو — رشد، هر قدم با هم</div>
+  </div>
+  <div class="hint" id="hintText">SPACE / ↑ TO JUMP &nbsp;·&nbsp; ↓ TO DUCK &nbsp;·&nbsp; DOUBLE JUMP ✓</div>
+</div>
+
+<script>
+// ══════════════════════════════
+// METANO RUN — GAME ENGINE
+// ══════════════════════════════
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = 800, H = 280;
+const GROUND = H - 44;
+
+// ── STARS BG ──
+const starsEl = document.getElementById('stars');
+for (let i = 0; i < 120; i++) {
+  const s = document.createElement('div');
+  s.className = 'star';
+  const sz = Math.random() * 1.8 + .3;
+  s.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;opacity:${Math.random()*.6+.1};animation-duration:${Math.random()*4+2}s;animation-delay:${Math.random()*4}s`;
+  starsEl.appendChild(s);
+}
+
+// ── TAGLINES ──
+const TAGLINES = [
+  'متانو — رشد، هر قدم با هم',
+  'هر مانعی فرصت پیشرفته',
+  'METANO کنارته تا پیروزی',
+  'با متانو، هر روز قوی‌تر',
+  'آیکون متانو = قدرت بیشتر!',
+  'پیشرفت، یه عادت روزانه‌ست',
+  'هر لوگو = یه قدم جلوتر',
+  'سقوط نکن — با متانو بپر!',
+  'رشد واقعی از اینجا شروع میشه',
+  'متانو — سریع‌تر، قوی‌تر، بهتر',
+];
+let tagIdx = 0;
+function cycleTagline() {
+  const el = document.getElementById('tagline');
+  el.classList.remove('flash');
+  setTimeout(() => {
+    tagIdx = (tagIdx + 1) % TAGLINES.length;
+    el.textContent = TAGLINES[tagIdx];
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 600);
+  }, 200);
+}
+setInterval(cycleTagline, 4000);
+
+// ── STATE ──
+let gameState = 'splash'; // splash | playing | dead
+let score = 0, hiScore = parseInt(localStorage.getItem('mtn_hi') || '0');
+let logosCollected = 0, level = 1;
+let gameSpeed = 5, frame = 0;
+let raf = null;
+
+// ── MONKEY (player) ──
+const monkey = {
+  x: 90, y: GROUND, w: 38, h: 44,
+  vy: 0, gravity: .7, jumpPow: -13.5,
+  jumpsLeft: 2,
+  ducking: false,
+  duckH: 26, normalH: 44,
+  dead: false,
+  animFrame: 0, animTimer: 0,
+  invincible: 0,
+  shield: false,
+  shieldTimer: 0,
+  boostTimer: 0,
+  get hitH() { return this.ducking ? this.duckH : this.h; }
+};
+
+// ── OBSTACLES ──
+let obstacles = [];
+const OBS_TYPES = [
+  // rocks
+  { type:'rock', w:28, h:36, minH:0 },
+  { type:'rock', w:20, h:24, minH:0 },
+  { type:'rock2', w:52, h:30, minH:0 }, // double rock
+  // birds (fly high)
+  { type:'bird', w:38, h:22, floatH: 80 },
+  { type:'bird', w:36, h:20, floatH: 110 },
+  // bars (must duck)
+  { type:'bar', w:18, h:55, minH:0 },
+];
+
+// ── LOGO POWER-UPS ──
+let powerUps = [];
+const PU_TYPES = [
+  { id:'boost', label:'SPEED BOOST ⚡', color:'#6366f1', msg:'متانو سرعتت رو بالا برد! ⚡' },
+  { id:'shield', label:'SHIELD 🛡️', color:'#10b981', msg:'متانو ازت محافظت میکنه! 🛡️' },
+  { id:'x2', label:'DOUBLE SCORE ×2', color:'#f59e0b', msg:'با متانو دو برابر رشد کن! ×2' },
+  { id:'jump', label:'SUPER JUMP 🚀', color:'#ec4899', msg:'متانو بالاتر می‌بریت! 🚀' },
+];
+let doubleScore = false, doubleTimer = 0;
+
+// ── PARTICLES ──
+let particles = [];
+function spawnParticles(x, y, color, count=8) {
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const spd = Math.random() * 4 + 1;
+    particles.push({ x, y, vx: Math.cos(a)*spd, vy: Math.sin(a)*spd - 2, life: 40, maxLife: 40, color, r: Math.random()*4+1.5 });
+  }
+}
+
+// ── FLOATING TEXTS ──
+let floatTexts = [];
+function spawnFloatText(x, y, text, color='#fff') {
+  floatTexts.push({ x, y, text, color, life: 60, maxLife: 60, vy: -1.5, size: 13 });
+}
+
+// ── GROUND DETAILS ──
+let groundDetails = [];
+for (let i = 0; i < 20; i++) {
+  groundDetails.push({ x: Math.random() * W, type: Math.random() > .5 ? 'dash' : 'dot', speed: 1 + Math.random() * .5 });
+}
+
+// ── BACKGROUND LAYERS ──
+let bgLayers = [
+  { items: Array.from({length:6},()=>({ x: Math.random()*W, y: GROUND - 60 - Math.random()*80, w: 40+Math.random()*60, h: 50+Math.random()*80, alpha: .06, speed: .8 })), speed: .8 },
+  { items: Array.from({length:4},()=>({ x: Math.random()*W, y: GROUND - 100 - Math.random()*100, w: 20+Math.random()*30, h: 120+Math.random()*80, alpha: .05, speed: 1.2 })), speed: 1.2 },
+];
+
+// ── SPAWN TIMERS ──
+let obsTimer = 60, puTimer = 300;
+
+function resetGame() {
+  score = 0; logosCollected = 0; level = 1; gameSpeed = 5; frame = 0;
+  obstacles = []; powerUps = []; particles = []; floatTexts = [];
+  doubleScore = false; doubleTimer = 0;
+  monkey.y = GROUND; monkey.vy = 0; monkey.jumpsLeft = 2;
+  monkey.ducking = false; monkey.dead = false;
+  monkey.invincible = 0; monkey.shield = false; monkey.shieldTimer = 0;
+  monkey.boostTimer = 0;
+  obsTimer = 80; puTimer = 260 + Math.random()*120;
+  gameState = 'playing';
+  document.getElementById('gameOver').style.display = 'none';
+}
+
+// ── MONKEY DRAW ──
+function drawMonkey() {
+  const x = monkey.x, y = monkey.y, w = monkey.w;
+  const h = monkey.hitH;
+  const duck = monkey.ducking;
+  const t = frame * .12;
+  const runCycle = Math.sin(t) * (duck ? 0 : 3);
+
+  ctx.save();
+  ctx.translate(x + w/2, y + h - (duck ? duckOffset() : 0));
+
+  // Invincibility flicker
+  if (monkey.invincible > 0 && Math.floor(frame/3) % 2 === 0) { ctx.restore(); return; }
+
+  // Shield aura
+  if (monkey.shield) {
+    ctx.globalAlpha = .25 + Math.sin(t*3)*.1;
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, -h/2 - (duck?0:2), w*.8, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // Shadow
+  ctx.globalAlpha = .2;
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.ellipse(0, 2, w*.55, 5, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  const bh = h; // body height ref
+  const bw = w;
+
+  if (!duck) {
+    // LEGS animated
+    ctx.fillStyle = '#2d1a0e';
+    // left leg
+    ctx.save();
+    ctx.translate(-bw*.2, -bh*.18);
+    ctx.rotate(runCycle*.06);
+    ctx.fillRect(-5, 0, 9, bh*.28);
+    // foot
+    ctx.fillStyle = '#1a0e05';
+    ctx.fillRect(-5, bh*.28 - 2, 13, 7);
+    ctx.restore();
+    // right leg
+    ctx.fillStyle = '#2d1a0e';
+    ctx.save();
+    ctx.translate(bw*.2, -bh*.18);
+    ctx.rotate(-runCycle*.06);
+    ctx.fillRect(-4, 0, 9, bh*.28);
+    ctx.fillStyle = '#1a0e05';
+    ctx.fillRect(-7, bh*.28 - 2, 13, 7);
+    ctx.restore();
+  }
+
+  // Body
+  const bodyColor = monkey.boostTimer > 0 ? '#7c6bff' : monkey.shield ? '#10b981' : '#5c3a1e';
+  ctx.fillStyle = bodyColor;
+  const bodyY = duck ? -bh + 8 : -bh + 8;
+  const bodyH = duck ? bh - 12 : bh * .52;
+  ctx.beginPath();
+  ctx.roundRect(-bw*.42, bodyY, bw*.84, bodyH, 8);
+  ctx.fill();
+
+  // Chest lighter
+  ctx.fillStyle = '#8b5e3c';
+  ctx.beginPath();
+  ctx.ellipse(0, bodyY + bodyH*.4, bw*.22, bodyH*.28, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  if (!duck) {
+    // Arms animated
+    ctx.fillStyle = '#5c3a1e';
+    // right arm
+    ctx.save();
+    ctx.translate(bw*.38, bodyY + bodyH*.2);
+    ctx.rotate(-runCycle*.08 + .3);
+    ctx.fillRect(0, 0, 7, bh*.28);
+    // hand
+    ctx.fillStyle = '#8b5e3c';
+    ctx.beginPath();
+    ctx.arc(3.5, bh*.28, 5, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+    // left arm
+    ctx.fillStyle = '#5c3a1e';
+    ctx.save();
+    ctx.translate(-bw*.38 - 7, bodyY + bodyH*.2);
+    ctx.rotate(runCycle*.08 - .3);
+    ctx.fillRect(0, 0, 7, bh*.28);
+    ctx.fillStyle = '#8b5e3c';
+    ctx.beginPath();
+    ctx.arc(3.5, bh*.28, 5, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // HEAD
+  const headY = duck ? bodyY - 24 : bodyY - 26;
+  const headR = duck ? 14 : 16;
+
+  // Head base
+  ctx.fillStyle = '#5c3a1e';
+  ctx.beginPath();
+  ctx.arc(0, headY, headR, 0, Math.PI*2);
+  ctx.fill();
+
+  // Ears
+  ctx.fillStyle = '#5c3a1e';
+  ctx.beginPath();
+  ctx.arc(-headR + 2, headY - 4, 7, 0, Math.PI*2);
+  ctx.arc(headR - 2, headY - 4, 7, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#c4836a';
+  ctx.beginPath();
+  ctx.arc(-headR + 2, headY - 4, 4, 0, Math.PI*2);
+  ctx.arc(headR - 2, headY - 4, 4, 0, Math.PI*2);
+  ctx.fill();
+
+  // Face
+  ctx.fillStyle = '#c4836a';
+  ctx.beginPath();
+  ctx.ellipse(0, headY + 4, 10, 9, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Eyes
+  const eyeGlow = monkey.boostTimer > 0 ? '#7c6bff' : monkey.shield ? '#10b981' : '#fff';
+  ctx.fillStyle = eyeGlow;
+  ctx.beginPath();
+  ctx.arc(-5, headY - 2, 4, 0, Math.PI*2);
+  ctx.arc(5, headY - 2, 4, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.arc(-5, headY - 2, 2.2, 0, Math.PI*2);
+  ctx.arc(5, headY - 2, 2.2, 0, Math.PI*2);
+  ctx.fill();
+  // Eye shine
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(-4, headY - 3, 1, 0, Math.PI*2);
+  ctx.arc(6, headY - 3, 1, 0, Math.PI*2);
+  ctx.fill();
+
+  // Nose
+  ctx.fillStyle = '#8b4a30';
+  ctx.beginPath();
+  ctx.ellipse(0, headY + 3, 3.5, 2.5, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Nostrils
+  ctx.fillStyle = '#5c2e1a';
+  ctx.beginPath();
+  ctx.arc(-1.5, headY + 3.5, 1, 0, Math.PI*2);
+  ctx.arc(1.5, headY + 3.5, 1, 0, Math.PI*2);
+  ctx.fill();
+
+  // Smile / expression
+  ctx.strokeStyle = '#5c2e1a';
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(0, headY + 6, 4, .2, Math.PI - .2);
+  ctx.stroke();
+
+  // Hat (Metano logo on top)
+  if (!duck) {
+    ctx.fillStyle = '#111';
+    ctx.fillRect(-12, headY - headR - 10, 24, 10);
+    ctx.fillRect(-9, headY - headR - 18, 18, 10);
+    // Tiny M on hat
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 7px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('M', 0, headY - headR - 1);
+  }
+
+  // Tail (animated)
+  if (!duck) {
+    ctx.strokeStyle = '#5c3a1e';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    const tailX = bw*.38;
+    const tailY = bodyY + bodyH*.6;
+    ctx.moveTo(tailX, tailY);
+    ctx.bezierCurveTo(tailX+18, tailY - 10 + runCycle*1.5, tailX+22, tailY + 15, tailX+12, tailY + 20 - runCycle);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function duckOffset() { return 14; }
+
+// ── LOGO POWER-UP DRAW ──
+function drawLogo(x, y, size, puType, t) {
+  ctx.save();
+  ctx.translate(x, y);
+  const pulse = 1 + Math.sin(t * .06) * .1;
+  ctx.scale(pulse, pulse);
+
+  // Glow
+  const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 1.8);
+  grd.addColorStop(0, puType.color + '33');
+  grd.addColorStop(1, 'transparent');
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.arc(0, 0, size * 1.8, 0, Math.PI*2);
+  ctx.fill();
+
+  // Outer ring
+  ctx.strokeStyle = puType.color;
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = .5 + Math.sin(t*.06)*.3;
+  ctx.beginPath();
+  ctx.arc(0, 0, size * 1.3, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Logo shape
+  const s = size / 50;
+  ctx.scale(s, s);
+  ctx.fillStyle = puType.color;
+  ctx.shadowColor = puType.color;
+  ctx.shadowBlur = 12;
+
+  // M+N monogram
+  ctx.beginPath();
+  ctx.moveTo(-30, 32);
+  ctx.lineTo(-30, -18);
+  ctx.lineTo(-15, 6);
+  ctx.lineTo(0, -30);
+  ctx.lineTo(15, 6);
+  ctx.lineTo(30, -18);
+  ctx.lineTo(30, 32);
+  ctx.lineTo(20, 32);
+  ctx.lineTo(20, 4);
+  ctx.lineTo(13, 18);
+  ctx.lineTo(0, -8);
+  ctx.lineTo(-13, 18);
+  ctx.lineTo(-20, 4);
+  ctx.lineTo(-20, 32);
+  ctx.closePath();
+  ctx.fill();
+
+  // bottom bracket
+  ctx.beginPath();
+  ctx.moveTo(-16, 32);
+  ctx.lineTo(16, 32);
+  ctx.lineTo(16, 22);
+  ctx.lineTo(0, 10);
+  ctx.lineTo(-16, 22);
+  ctx.closePath();
+  ctx.fill();
+
+  // top arrow
+  ctx.fillRect(-3, -42, 6, 20);
+  ctx.beginPath();
+  ctx.moveTo(-6, -42); ctx.lineTo(6, -42); ctx.lineTo(0, -50); ctx.closePath();
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+// ── OBSTACLES DRAW ──
+function drawObstacle(obs) {
+  const x = obs.x, y = obs.y, w = obs.w, h = obs.h;
+  ctx.save();
+
+  if (obs.type === 'rock' || obs.type === 'rock2') {
+    // Shadow
+    ctx.globalAlpha = .15;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(x + w/2, GROUND + 4, w*.6, 4, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = '#2a2a3a';
+    ctx.strokeStyle = '#3a3a4a';
+    ctx.lineWidth = 1.5;
+
+    if (obs.type === 'rock2') {
+      // Two rocks
+      drawRockShape(ctx, x, y + 8, 22, 26);
+      drawRockShape(ctx, x + 28, y, 24, 30);
+    } else {
+      drawRockShape(ctx, x, y, w, h);
+    }
+  } else if (obs.type === 'bird') {
+    const t = frame * .15;
+    ctx.fillStyle = '#4a3060';
+    ctx.strokeStyle = '#6a50a0';
+    ctx.lineWidth = 1.5;
+    // Body
+    ctx.beginPath();
+    ctx.ellipse(x + w*.5, y + h*.5, w*.4, h*.35, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+    // Wing left
+    ctx.save();
+    ctx.translate(x + w*.2, y + h*.45);
+    ctx.rotate(-Math.sin(t) * .5 - .3);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, w*.35, h*.2, -.3, 0, Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+    // Wing right
+    ctx.save();
+    ctx.translate(x + w*.8, y + h*.45);
+    ctx.rotate(Math.sin(t) * .5 + .3);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, w*.35, h*.2, .3, 0, Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+    // Eye
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.arc(x + w*.65, y + h*.4, 2.5, 0, Math.PI*2);
+    ctx.fill();
+    // Beak
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.moveTo(x + w*.82, y + h*.45);
+    ctx.lineTo(x + w + 6, y + h*.5);
+    ctx.lineTo(x + w*.82, y + h*.58);
+    ctx.closePath();
+    ctx.fill();
+  } else if (obs.type === 'bar') {
+    ctx.fillStyle = '#1a1a2e';
+    ctx.strokeStyle = '#6366f1';
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = '#6366f1';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeRect(x, y, w, h);
+    ctx.shadowBlur = 0;
+    // Glow line
+    ctx.fillStyle = '#6366f1';
+    ctx.globalAlpha = .4;
+    ctx.fillRect(x + 4, y + 4, w - 8, 3);
+    ctx.globalAlpha = 1;
+    // Warning symbol
+    ctx.fillStyle = '#f59e0b';
+    ctx.font = 'bold 10px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚠', x + w/2, y + h/2 + 4);
+  }
+  ctx.restore();
+}
+
+function drawRockShape(ctx, x, y, w, h) {
+  ctx.beginPath();
+  ctx.moveTo(x + w*.5, y);
+  ctx.lineTo(x + w, y + h*.4);
+  ctx.lineTo(x + w*.85, y + h);
+  ctx.lineTo(x + w*.15, y + h);
+  ctx.lineTo(x, y + h*.4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Highlight
+  ctx.strokeStyle = '#4a4a5a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x + w*.3, y + h*.15);
+  ctx.lineTo(x + w*.6, y + h*.1);
+  ctx.stroke();
+}
+
+// ── GROUND ──
+function drawGround() {
+  // Main ground line
+  ctx.fillStyle = 'rgba(255,255,255,.06)';
+  ctx.fillRect(0, GROUND, W, 2);
+
+  // Ground details
+  ctx.fillStyle = 'rgba(255,255,255,.04)';
+  for (const gd of groundDetails) {
+    gd.x -= gd.speed * gameSpeed * .3;
+    if (gd.x < -30) gd.x = W + 20;
+    if (gd.type === 'dash') {
+      ctx.fillRect(gd.x, GROUND + 8, 20, 1.5);
+    } else {
+      ctx.beginPath();
+      ctx.arc(gd.x, GROUND + 10, 1.5, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+}
+
+// ── BACKGROUND STRUCTURES ──
+function drawBg() {
+  for (const layer of bgLayers) {
+    for (const item of layer.items) {
+      item.x -= layer.speed * (gameSpeed * .08);
+      if (item.x + item.w < 0) {
+        item.x = W + item.w;
+        item.y = GROUND - 50 - Math.random() * 100;
+      }
+      ctx.globalAlpha = item.alpha;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(item.x, item.y, item.w * .15, -item.h);
+      ctx.fillRect(item.x + item.w * .4, item.y - item.h * .2, item.w * .12, -item.h * .8);
+      ctx.fillRect(item.x + item.w * .7, item.y - item.h * .1, item.w * .1, -item.h * .6);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── PARTICLES ──
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy;
+    p.vy += .12;
+    p.vx *= .95;
+    p.life--;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    const a = p.life / p.maxLife;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * a, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+  ctx.globalAlpha = 1;
+}
+
+function updateFloatTexts() {
+  for (let i = floatTexts.length - 1; i >= 0; i--) {
+    const f = floatTexts[i];
+    f.y += f.vy; f.life--;
+    if (f.life <= 0) { floatTexts.splice(i, 1); continue; }
+    const a = f.life / f.maxLife;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = f.color;
+    ctx.font = `bold ${f.size}px Courier New`;
+    ctx.textAlign = 'center';
+    ctx.shadowColor = f.color;
+    ctx.shadowBlur = 8;
+    ctx.fillText(f.text, f.x, f.y);
+    ctx.shadowBlur = 0;
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── SPAWN ──
+function spawnObstacle() {
+  const type = OBS_TYPES[Math.floor(Math.random() * OBS_TYPES.length)];
+  let y, h = type.h || 36;
+  if (type.floatH !== undefined) {
+    y = GROUND - type.floatH - type.h;
+  } else {
+    y = GROUND - h;
+  }
+  obstacles.push({ ...type, x: W + 30, y, origY: y });
+  // sometimes double obstacle
+  if (Math.random() < .2 && level >= 3) {
+    const gap = 80 + Math.random() * 60;
+    const type2 = OBS_TYPES[Math.floor(Math.random() * 3)]; // only ground
+    obstacles.push({ ...type2, x: W + 30 + gap, y: GROUND - type2.h, origY: GROUND - type2.h });
+  }
+}
+
+function spawnPowerUp() {
+  const pu = PU_TYPES[Math.floor(Math.random() * PU_TYPES.length)];
+  const floatH = 40 + Math.random() * 60;
+  powerUps.push({ ...pu, x: W + 30, y: GROUND - floatH - 22 });
+}
+
+// ── COLLISION ──
+function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+  const pad = 8;
+  return ax + pad < bx + bw - pad && ax + aw - pad > bx + pad && ay + pad < by + bh - pad && ay + ah - pad > by + bh * .1;
+}
+
+// ── SHOW TOAST ──
+function showPUToast(text, color) {
+  const el = document.getElementById('puToast');
+  el.textContent = text;
+  el.style.borderColor = color + '66';
+  el.style.color = color;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── APPLY POWER UP ──
+function applyPowerUp(pu) {
+  logosCollected++;
+  spawnParticles(pu.x, pu.y, pu.color, 20);
+  spawnFloatText(pu.x, pu.y - 20, pu.label, pu.color);
+  showPUToast(pu.msg, pu.color);
+
+  if (pu.id === 'boost') {
+    monkey.boostTimer = 180;
+    gameSpeed = Math.min(gameSpeed + 2, 18);
+    setTimeout(() => { gameSpeed = Math.max(gameSpeed - 1, 5 + level); }, 3000);
+  } else if (pu.id === 'shield') {
+    monkey.shield = true;
+    monkey.shieldTimer = 240;
+  } else if (pu.id === 'x2') {
+    doubleScore = true;
+    doubleTimer = 300;
+    spawnFloatText(monkey.x + monkey.w/2, monkey.y - 60, '×2 SCORE!', '#f59e0b');
+  } else if (pu.id === 'jump') {
+    monkey.jumpPow = -18;
+    monkey.jumpsLeft = 3;
+    setTimeout(() => monkey.jumpPow = -13.5, 4000);
+  }
+}
+
+// ── UPDATE LEVEL ──
+function updateLevel() {
+  const newLevel = Math.floor(score / 300) + 1;
+  if (newLevel > level) {
+    level = newLevel;
+    gameSpeed = Math.min(5 + (level - 1) * .8, 18);
+    spawnFloatText(W/2, H/2, `LEVEL ${level}!`, '#fff');
+    showPUToast(`LEVEL ${level} — با متانو رشد کردی! 🎯`, '#fff');
+    obsTimer = Math.max(40, 80 - level * 5);
+  }
+}
+
+// ── GAME OVER ──
+function triggerGameOver() {
+  gameState = 'dead';
+  monkey.dead = true;
+  const prev = parseInt(localStorage.getItem('mtn_hi') || '0');
+  if (score > prev) { localStorage.setItem('mtn_hi', score); hiScore = score; }
+
+  const MSGS = [
+    'هر بار که می‌افتی،\n<span>یاد می‌گیری</span> — متانو کنارته',
+    'شکست‌ها، مسیر <span>رشد</span> رو نشون میدن!',
+    '<span>ادامه بده</span> — موفقیت نزدیکه!',
+    'با متانو <span>هر روز</span> قوی‌تر میشی',
+    `${logosCollected} لوگو جمع کردی — <span>عالیه!</span>`,
+  ];
+  const msg = MSGS[Math.floor(Math.random() * MSGS.length)];
+
+  document.getElementById('goScore').textContent = score;
+  document.getElementById('goLogos').textContent = logosCollected;
+  document.getElementById('goHi').textContent = Math.max(hiScore, score);
+  document.getElementById('goLevel').textContent = level;
+  document.getElementById('goMsg').innerHTML = msg;
+
+  setTimeout(() => {
+    document.getElementById('gameOver').style.display = 'flex';
+    spawnParticles(monkey.x + monkey.w/2, monkey.y + monkey.hitH/2, '#ff4444', 20);
+  }, 400);
+}
+
+// ── MAIN LOOP ──
+function gameLoop() {
+  ctx.clearRect(0, 0, W, H);
+
+  // BG
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(0, 0, W, H);
+
+  drawBg();
+
+  if (gameState === 'playing' || gameState === 'dead') {
+    frame++;
+
+    // Score
+    if (gameState === 'playing') {
+      score += doubleScore ? 2 : 1;
+      if (doubleTimer > 0) { doubleTimer--; if (doubleTimer <= 0) doubleScore = false; }
+      if (monkey.invincible > 0) monkey.invincible--;
+      if (monkey.shieldTimer > 0) { monkey.shieldTimer--; if (monkey.shieldTimer <= 0) monkey.shield = false; }
+      if (monkey.boostTimer > 0) monkey.boostTimer--;
+      updateLevel();
+    }
+
+    // Spawn
+    if (gameState === 'playing') {
+      obsTimer--;
+      if (obsTimer <= 0) {
+        spawnObstacle();
+        obsTimer = Math.max(45, 90 - level * 4) + Math.random() * 30;
+      }
+      puTimer--;
+      if (puTimer <= 0) {
+        spawnPowerUp();
+        puTimer = 220 + Math.random() * 180;
+      }
+    }
+
+    // Ground
+    drawGround();
+
+    // Move + draw obstacles
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+      const obs = obstacles[i];
+      if (gameState === 'playing') obs.x -= gameSpeed;
+      if (obs.x + obs.w < -20) { obstacles.splice(i, 1); continue; }
+      drawObstacle(obs);
+
+      // Collision
+      if (gameState === 'playing' && !monkey.dead) {
+        const mhit = { x: monkey.x, y: monkey.y + (monkey.h - monkey.hitH), w: monkey.w, h: monkey.hitH };
+        if (rectsOverlap(mhit.x, mhit.y, mhit.w, mhit.h, obs.x, obs.y, obs.w, obs.h)) {
+          if (monkey.shield) {
+            monkey.shield = false; monkey.shieldTimer = 0;
+            obstacles.splice(i, 1);
+            spawnParticles(obs.x, obs.y + obs.h/2, '#10b981', 15);
+            showPUToast('شیلد شکست! ولی متانو ازت محافظت کرد! 🛡️', '#10b981');
+          } else if (monkey.invincible <= 0) {
+            triggerGameOver();
+          }
+        }
+      }
+    }
+
+    // Power-ups
+    for (let i = powerUps.length - 1; i >= 0; i--) {
+      const pu = powerUps[i];
+      if (gameState === 'playing') pu.x -= gameSpeed * .85;
+      if (pu.x + 30 < 0) { powerUps.splice(i, 1); continue; }
+      drawLogo(pu.x, pu.y, 22, pu, frame);
+
+      // Collect
+      if (gameState === 'playing') {
+        const mhit = { x: monkey.x, y: monkey.y + (monkey.h - monkey.hitH), w: monkey.w, h: monkey.hitH };
+        if (rectsOverlap(mhit.x, mhit.y, mhit.w, mhit.h, pu.x - 22, pu.y - 22, 44, 44)) {
+          applyPowerUp(pu);
+          powerUps.splice(i, 1);
+          monkey.invincible = 40;
+        }
+      }
+    }
+
+    // Physics
+    if (gameState === 'playing') {
+      monkey.vy += monkey.gravity;
+      monkey.y += monkey.vy;
+      if (monkey.y >= GROUND) {
+        monkey.y = GROUND;
+        monkey.vy = 0;
+        monkey.jumpsLeft = 2;
+      }
+    }
+
+    // Draw monkey
+    drawMonkey();
+
+    // Particles + float texts
+    updateParticles();
+    updateFloatTexts();
+
+    // HUD score
+    document.getElementById('scoreDisp').textContent = score;
+    document.getElementById('hiDisp').textContent = Math.max(hiScore, score);
+    document.getElementById('lvlDisp').textContent = level;
+
+    // Double score indicator
+    if (doubleScore) {
+      ctx.globalAlpha = .6 + Math.sin(frame*.2)*.3;
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 11px Courier New';
+      ctx.textAlign = 'left';
+      ctx.fillText('×2', monkey.x + monkey.w + 4, monkey.y - 10);
+      ctx.globalAlpha = 1;
+    }
+
+    // Boost indicator
+    if (monkey.boostTimer > 0) {
+      ctx.globalAlpha = .6;
+      ctx.fillStyle = '#6366f1';
+      ctx.font = '10px Courier New';
+      ctx.textAlign = 'left';
+      ctx.fillText('⚡', monkey.x + monkey.w + 4, monkey.y - 22);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  raf = requestAnimationFrame(gameLoop);
+}
+
+// ── JUMP ──
+function jump() {
+  if (monkey.dead) return;
+  if (gameState === 'splash') {
+    document.getElementById('splash').style.display = 'none';
+    resetGame();
+    gameLoop();
+    return;
+  }
+  if (gameState !== 'playing') return;
+  if (monkey.ducking) { monkey.ducking = false; return; }
+  if (monkey.jumpsLeft > 0) {
+    monkey.vy = monkey.jumpPow;
+    monkey.jumpsLeft--;
+    spawnParticles(monkey.x + monkey.w/2, monkey.y + monkey.hitH, '#6366f1', 6);
+  }
+}
+
+function duck(on) {
+  if (gameState !== 'playing') return;
+  monkey.ducking = on;
+  if (on && monkey.y < GROUND - 10) monkey.vy = Math.min(monkey.vy + 5, 8);
+}
+
+// ── CONTROLS ──
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); jump(); }
+  if (e.code === 'ArrowDown') { e.preventDefault(); duck(true); }
+});
+document.addEventListener('keyup', e => {
+  if (e.code === 'ArrowDown') duck(false);
+});
+canvas.addEventListener('touchstart', e => { e.preventDefault(); jump(); }, { passive: false });
+canvas.addEventListener('pointerdown', e => { if (e.button === 0) jump(); });
+
+// ── RESTART ──
+function restartGame() {
+  resetGame();
+}
+
+// ── INIT ──
+hiScore = parseInt(localStorage.getItem('mtn_hi') || '0');
+document.getElementById('hiDisp').textContent = hiScore;
+
+// Start idle loop (just background) on splash
+gameLoop();
+</script>
+</body>
+</html>
